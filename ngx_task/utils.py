@@ -5,8 +5,10 @@ import zipfile
 from xml.etree import cElementTree as ET
 from uuid import uuid4
 
+from ngx_task import settings
 
-def make_name(count=20):
+
+def make_name(count=settings.OBJECT_NAME_LENGTH):
     return ''.join(random.sample(string.ascii_letters, count))
 
 
@@ -23,10 +25,11 @@ def generate_document():
     return root
 
 
-def create_archive(filename, documents_count=100):
-    with zipfile.ZipFile(filename, 'w') as zf:
-        for doc_number in range(1, documents_count + 1):
-            document_name = 'document-{}.xml'.format(doc_number)
+def archive_documents(filename, count=settings.ARCHIVE_DOCUMENTS_COUNT):
+    arc_filename = os.path.join(settings.DATA_DIR, filename)
+    with zipfile.ZipFile(arc_filename, 'w') as zf:
+        for doc_number in range(1, count + 1):
+            document_name = '{}-document-{}.xml'.format(filename, doc_number)
             tree = ET.ElementTree(generate_document())
             try:
                 tree.write(document_name, encoding='utf-8')
