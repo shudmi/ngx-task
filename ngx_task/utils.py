@@ -30,10 +30,19 @@ def archive_documents(filename, count=settings.ARCHIVE_DOCUMENTS_COUNT):
     with zipfile.ZipFile(arc_filename, 'w') as zf:
         for doc_number in range(1, count + 1):
             document_name = '{}-document-{}.xml'.format(filename, doc_number)
-            tree = ET.ElementTree(generate_document())
-            try:
-                tree.write(document_name, encoding='utf-8')
-                zf.write(document_name)
-            finally:
-                if os.path.exists(document_name):
-                    os.remove(document_name)
+            zf.write(document_name, ET.tostring(generate_document(), encoding='utf-8'))
+
+
+def unarchive_documents(filename):
+    arc_filename = os.path.join(settings.DATA_DIR, filename)
+    if not os.path.exists(arc_filename):
+        return
+
+    with zipfile.ZipFile(arc_filename, 'r') as zf:
+        for name in zf.namelist():
+            xml_data = ET.fromstring(zf.read(name).decode('utf-8'))
+            yield {
+                'id': xml_data.find('var[@name="id"]').get('value'),
+                'level': xml_data.find('var[@name="level"]').get('value'),
+                'objects': [obj.get('name') for obj in xml_data.iterfind('objects/object')],
+            }
