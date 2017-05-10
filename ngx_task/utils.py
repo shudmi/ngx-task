@@ -33,16 +33,13 @@ def archive_documents(filename, count=settings.ARCHIVE_DOCUMENTS_COUNT):
             zf.write(document_name, ET.tostring(generate_document(), encoding='utf-8'))
 
 
-def unarchive_documents(filename):
-    arc_filename = os.path.join(settings.DATA_DIR, filename)
-    if not os.path.exists(arc_filename):
-        return
+def process_archive(path, f_queue, obj_queue):
+    with zipfile.ZipFile(path, 'r') as zf:
+        for member in zf.namelist():
+            xml_data = ET.fromstring(zf.read(member).decode('utf-8'))
+            file_id = xml_data.find('var[@name="id"]').get('value')
+            file_level = xml_data.find('var[@name="level"]').get('value')
 
-    with zipfile.ZipFile(arc_filename, 'r') as zf:
-        for name in zf.namelist():
-            xml_data = ET.fromstring(zf.read(name).decode('utf-8'))
-            yield {
-                'id': xml_data.find('var[@name="id"]').get('value'),
-                'level': xml_data.find('var[@name="level"]').get('value'),
-                'objects': [obj.get('name') for obj in xml_data.iterfind('objects/object')],
-            }
+            f_queue.put((file_id, file_level))
+            for obj in xml_data.iterfind('objects/object'):
+                obj_queue.put((file_id, obj.get('name')))
