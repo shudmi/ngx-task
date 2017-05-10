@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -17,3 +18,23 @@ def generate_data():
             print('Complete {}'.format(futures_to_process[fut]))
 
         print('All data has been generated')
+
+
+def process_data():
+    file_queue = mp.JoinableQueue()
+    object_queue = mp.JoinableQueue()
+
+    file_worker = mp.Process(target=utils.worker, args=('files.csv', file_queue,))
+    file_worker.start()
+    object_worker = mp.Process(target=utils.worker, args=('objects.csv', object_queue,))
+    object_worker.start()
+
+    for arc in os.listdir(settings.DATA_DIR):
+        path = os.path.join(settings.DATA_DIR, arc)
+        utils.process_archive(path, file_queue, object_queue)
+
+    file_queue.put(None)
+    object_queue.put(None)
+
+    file_queue.join()
+    object_queue.join()
