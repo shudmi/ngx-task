@@ -1,3 +1,4 @@
+import csv
 import os
 import random
 import string
@@ -43,3 +44,16 @@ def process_archive(path, f_queue, obj_queue):
             f_queue.put((file_id, file_level))
             for obj in xml_data.iterfind('objects/object'):
                 obj_queue.put((file_id, obj.get('name')))
+
+
+def worker(filename, tasks):
+    with open(filename, 'w') as result_file:
+        file_writer = csv.writer(result_file)
+        while 1:
+            current_task = tasks.get()
+            if current_task is None:
+                tasks.task_done()
+                break
+
+            file_writer.writerow(current_task)
+            tasks.task_done()
